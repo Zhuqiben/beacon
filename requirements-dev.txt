@@ -1,0 +1,13 @@
+# Tooling for contributors and CI.
+#
+# Runtime and build dependencies are NOT listed here: they come from ROS 2 and from the
+# distribution's apt packages, and `scripts/install_deps.sh` installs them. This file only
+# covers the linters, which are pinned so that a local run and a CI run report the same
+# thing.
+#
+# shellcheck is a separate standalone binary rather than a Python package.
+# Ubuntu: `sudo apt install shellcheck`. Other platforms:
+# https://github.com/koalaman/shellcheck#installing
+
+flake8==7.4.1
+PyYAML==6.0.2

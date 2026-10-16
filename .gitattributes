@@ -1,0 +1,36 @@
+# Normalise every text file to LF in the repository, whatever the developer's
+# platform. Without this a Windows checkout would commit CRLF into .py, .sh and
+# .yaml files, and a shell script with a CRLF shebang fails on Linux.
+* text=auto eol=lf
+
+# Shell scripts must stay executable and LF, or ./scripts/install_deps.sh breaks.
+*.sh        text eol=lf
+
+# Source, configuration and documentation.
+*.py        text eol=lf
+*.xml       text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.json      text eol=lf
+*.cfg       text eol=lf
+*.md        text eol=lf
+*.sdf       text eol=lf
+*.world     text eol=lf
+*.xacro     text eol=lf
+*.urdf      text eol=lf
+*.rviz      text eol=lf
+*.txt       text eol=lf
+
+# Binary assets: never touch them.
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.pgm       binary
+*.stl       binary
+*.dae       binary
+*.zip       binary
+
+# colcon output is generated, never edited and never reviewed in a diff.
+build/**    linguist-generated=true -diff
+install/**  linguist-generated=true -diff
+log/**      linguist-generated=true -diff

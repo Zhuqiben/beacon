@@ -1,0 +1,14 @@
+# ekf_slam parameters.
+#
+# Usage:
+#   ros2 run ekf_slam slam_node --ros-args --params-file <this file>
+#   ros2 param get /ekf_slam select_distance_max
+#
+# Only the two quantities that change behaviour and need tuning in the field are exposed.
+# The filter noise parameters live in ekf_core.py: R grows with range, the chi-square gate
+# is 5.991, and Q is scaled by dt.
+/**:
+  ros__parameters:
+    use_sim_time: true
+    select_distance_max: 5.0      # landmarks beyond this range never update the filter [m]
+    min_landmarks: 2              # below this many valid updates the frame predicts only, with a WARN

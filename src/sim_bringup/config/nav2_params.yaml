@@ -1,0 +1,355 @@
+# =============================================================================
+# Nav2 Humble parameters, handed by sim_bringup/launch/demo.launch.py through
+# nav2_navigation.launch.py to every Nav2 node.
+#
+# All keys are kept, with the ones Humble does not read marked [inert] in place
+# and explained here. Replacing an inert key means a ROS remapping, and a remap
+# can only be written where the node is created, that is in
+# sim_bringup/launch/nav2_navigation.launch.py.
+#
+#  1) controller_server.cmd_vel_topic                          [inert]
+#     Humble nav2_controller/src/controller_server.cpp hard-codes
+#       create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 1);
+#     and has no cmd_vel_topic parameter.
+#     => done by the controller_server remap ('cmd_vel' -> 'cmd_vel_nav') in launch.
+#
+#  2) velocity_smoother.cmd_vel_in_topic / cmd_vel_out_topic    [inert]
+#     Humble nav2_velocity_smoother subscribes to "cmd_vel" and publishes
+#     "cmd_vel_smoothed", and reads neither parameter; those two literals are the
+#     only topic names in libvelocity_smoother_core.so. Both values are kept
+#     because the output name matches the topic actually in use.
+#
+#  3) collision_monitor.cmd_vel_in_topic / cmd_vel_out_topic    [valid]
+#     CollisionMonitor::getParameters() really reads these two keys, and they are
+#     the last link of the chain:
+#       controller_server -> /cmd_vel_nav -> velocity_smoother
+#                    -> /cmd_vel_smoothed -> collision_monitor -> /cmd_vel -> Gazebo
+#     controller_server and collision_monitor must never both publish to /cmd_vel.
+#
+#  4) controller_server.progress_checker_plugins               [inert]
+#     Humble declares the singular progress_checker_plugin, whose default
+#     ("progress_checker") already matches the name intended here, so the
+#     behaviour is correct; the singular key is written out explicitly as well.
+#
+#  5) collision_monitor.StopPolygon.min_points                 [inert]
+#     The Humble key is max_points (default 3) and there is no min_points. The
+#     original key is kept alongside the real one. A stop is triggered when
+#     getPointsInside() > max_points, so max_points = 8 means "stop at 9 points
+#     or more inside the polygon". What this protects is the stop action itself:
+#     processStopSlowdown() with action_type "stop" also zeroes req_vel.tw, which
+#     makes the spin and backup recoveries impossible to execute and leaves the
+#     robot frozen until NAVIGATING times out. A lower threshold would make the polygon
+#     fire on a block grazing the body by a few millimetres. The polygon geometry
+#     and action_type are unchanged.
+#
+#  6) collision_monitor.StopPolygon.points                     [must be rewritten]
+#     Humble reads these with declare_parameter(..., PARAMETER_DOUBLE_ARRAY) plus
+#     as_double_array(), so the string form "[[0.3, 0.2], ...]" raises
+#     ParameterTypeException: getParameters()
+#     returns false, on_configure() fails and the whole lifecycle stack never
+#     starts, or starts without /cmd_vel ever carrying data. Hence the flat double
+#     array below (4 vertices = 8 numbers; Humble requires size > 6 and even).
+#
+#  7) bt_navigator.navigators, navigate_to_pose.plugin, ...    [inert]
+#     BtNavigator has no navigators parameter: on_configure() configures both
+#     NavigateToPose and NavigateThroughPoses unconditionally and both default BT
+#     files are loaded. plugin_lib_names must therefore list every node type used
+#     by BOTH trees, otherwise createTreeFromFile throws "Node not found",
+#     on_configure() fails and the whole Nav2 stack stays inactive.
+#
+#  8) the smoother_server section is additional: nav2_navigation.launch.py lists
+#     smoother_server in lifecycle_nodes, and with no parameter section it would
+#     not receive use_sim_time. The values are the Humble defaults, so the
+#     behaviour is unchanged.
+#
+#  9) controller_server.goal_checker.yaw_goal_tolerance is deliberately NOT set,
+#     so the SimpleGoalChecker default of 0.25 rad applies. The heading term of
+#     the arrival check stays strict and is satisfiable because of 10): the final
+#     heading agrees with the trajectory the robot actually drives, so no in-place
+#     rotation is needed to satisfy it. This platform cannot rotate in place
+#     reliably, which is what makes the pairing necessary.
+#
+# 10) planner_server.GridBased.use_final_approach_orientation = true. SmacPlanner2D
+#     defaults to false, which makes createPlan() write goal.pose.orientation into
+#     plan.poses.back(), the "face the landmark" heading the goal selector asks
+#     for. With true the final heading is the direction the robot actually
+#     approached from, so Nav2's arrival requirement and the trajectory agree and
+#     dwb RotateToGoal no longer deadlocks on a pure in-place rotation.
+# =============================================================================
+
+controller_server:
+  ros__parameters:
+    use_sim_time: true
+    controller_frequency: 10.0
+    min_x_velocity_threshold: 0.001
+    min_theta_velocity_threshold: 0.001
+    failure_tolerance: 0.3
+    progress_checker_plugins: ["progress_checker"]        # inert, see header 4)
+    progress_checker_plugin: "progress_checker"           # the key Humble reads (singular)
+    goal_checker_plugins: ["goal_checker"]
+    controller_plugins: ["FollowPath"]
+    # controller_server publishes to /cmd_vel_nav so it never contends with
+    # collision_monitor for /cmd_vel.
+    cmd_vel_topic: /cmd_vel_nav                           # inert, see header 1)
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.5
+      movement_time_allowance: 10.0
+    goal_checker:
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.25
+      # yaw_goal_tolerance is deliberately left unset, so the Humble default of
+      # 0.25 rad applies; see header 9).
+      stateful: True
+    FollowPath:
+      plugin: "dwb_core::DWBLocalPlanner"
+      debug_trajectory_details: true
+      min_vel_x: 0.0
+      min_vel_y: 0.0
+      max_vel_x: 0.3
+      max_vel_y: 0.0
+      max_vel_theta: 1.0
+      min_speed_xy: 0.0
+      max_speed_xy: 0.3
+      min_speed_theta: 0.0
+      acc_lim_x: 0.5
+      acc_lim_y: 0.0
+      acc_lim_theta: 1.0
+      decel_lim_x: -0.5
+      decel_lim_y: 0.0
+      decel_lim_theta: -1.0
+      vx_samples: 20
+      vy_samples: 5
+      vtheta_samples: 40
+      sim_time: 1.7
+      linear_granularity: 0.05
+      angular_granularity: 0.025
+      transform_tolerance: 0.2
+      xy_goal_tolerance: 0.25
+      stateful: True
+      critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign",
+                "PathAlign", "PathDist", "GoalDist"]
+      BaseObstacle.scale: 0.02
+      PathAlign.scale: 32.0
+      GoalAlign.scale: 24.0
+      PathDist.scale: 32.0
+      GoalDist.scale: 24.0
+
+# Additional section, see header 8). The Humble default plugin is simple_smoother
+# and the values below are its defaults.
+smoother_server:
+  ros__parameters:
+    use_sim_time: true
+    smoother_plugins: ["simple_smoother"]
+    simple_smoother:
+      plugin: "nav2_smoother::SimpleSmoother"
+      tolerance: 1.0e-4
+      max_its: 20
+      do_refinement: True
+
+planner_server:
+  ros__parameters:
+    use_sim_time: true
+    expected_planner_frequency: 1.0
+    planner_plugins: ["GridBased"]
+    GridBased:
+      plugin: "nav2_smac_planner/SmacPlanner2D"
+      tolerance: 0.125
+      downsample_costmap: false
+      allow_unknown: true
+      max_iterations: 1000000
+      max_planning_time: 2.0
+      # see header 10)
+      use_final_approach_orientation: true
+
+behavior_server:
+  ros__parameters:
+    use_sim_time: true
+    local_costmap_topic: local_costmap/costmap_raw
+    global_costmap_topic: global_costmap/costmap_raw
+    local_frame: odom
+    global_frame: map
+    robot_base_frame: base_link
+    transform_tolerance: 0.1
+    simulate_ahead_time: 2.0
+    behavior_plugins: ["spin", "backup", "drive_on_heading", "wait"]
+    spin: {plugin: "nav2_behaviors/Spin"}
+    backup: {plugin: "nav2_behaviors/BackUp"}
+    drive_on_heading: {plugin: "nav2_behaviors/DriveOnHeading"}
+    wait: {plugin: "nav2_behaviors/Wait"}
+
+bt_navigator:
+  ros__parameters:
+    use_sim_time: true
+    global_frame: map
+    robot_base_frame: base_link
+    odom_topic: /odom
+    transform_tolerance: 0.2
+    navigators: ["navigate_to_pose", "navigate_through_poses"]   # inert, see header 7)
+    navigate_to_pose:
+      plugin: "nav2_bt_navigator/NavigateToPoseNavigator"
+    navigate_through_poses:
+      plugin: "nav2_bt_navigator/NavigateThroughPosesNavigator"
+    plugin_lib_names:
+      - nav2_compute_path_to_pose_action_bt_node
+      - nav2_follow_path_action_bt_node
+      - nav2_back_up_action_bt_node
+      - nav2_spin_action_bt_node
+      - nav2_wait_action_bt_node
+      - nav2_clear_costmap_service_bt_node
+      - nav2_is_stuck_condition_bt_node
+      - nav2_goal_reached_condition_bt_node
+      - nav2_goal_updated_condition_bt_node
+      - nav2_initial_pose_received_condition_bt_node
+      - nav2_reinitialize_global_localization_service_bt_node
+      - nav2_rate_controller_bt_node
+      - nav2_recovery_node_bt_node
+      - nav2_pipeline_sequence_bt_node
+      - nav2_round_robin_node_bt_node
+      - nav2_transform_available_condition_bt_node
+      - nav2_time_expired_condition_bt_node
+      - nav2_distance_traveled_condition_bt_node
+      - nav2_single_trigger_bt_node
+      - nav2_is_battery_low_condition_bt_node
+      # Required by the through-poses BT, which uses RemovePassedGoals and
+      # ComputePathThroughPoses (see header 7)
+      - nav2_compute_path_through_poses_action_bt_node
+      - nav2_remove_passed_goals_action_bt_node
+
+waypoint_follower:
+  ros__parameters:
+    use_sim_time: true
+    loop_rate: 20
+    stop_on_failure: false
+    waypoint_task_executor_plugin: "wait_at_waypoint"
+    wait_at_waypoint:
+      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+      enabled: true
+      waypoint_pause_duration: 200
+
+velocity_smoother:
+  ros__parameters:
+    use_sim_time: true
+    smoothing_frequency: 20.0
+    scale_velocities: false
+    feedback: "OPEN_LOOP"
+    max_velocity: [0.3, 0.0, 1.0]
+    min_velocity: [-0.3, 0.0, -1.0]
+    max_accel: [0.5, 0.0, 1.0]
+    max_decel: [-0.5, 0.0, -1.0]
+    odom_topic: /odom
+    odom_duration: 0.1
+    deadband_velocity: [0.0, 0.0, 0.0]
+    velocity_timeout: 1.0
+    # Humble really reads these two keys, and they close the chain: in from the
+    # velocity smoother, out to Gazebo.
+    cmd_vel_in_topic:  /cmd_vel_nav          # inert, see header 2), done by the launch remap
+    cmd_vel_out_topic: /cmd_vel_smoothed     # inert, see header 2), the output name is correct
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      use_sim_time: true
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      global_frame: map
+      robot_base_frame: base_link
+      robot_radius: 0.22
+      resolution: 0.05
+      track_unknown_space: true
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: True
+      # The dynamic cubes reach the global costmap through /scan, which is what
+      # lets a blocked route trigger a replan.
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True
+        observation_sources: scan
+        scan:
+          topic: /scan
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          # Gazebo publishes +inf for every direction with no echo. With
+          # inf_is_valid false (the default) the readings go through
+          # laserScanCallback, an +inf produces no point, and a direction with no
+          # echo gets no clearing ray: the marks left by a block that has moved
+          # away stay lethal forever. True switches to
+          # laserScanValidInfCallback, which turns +inf into a point at
+          # range_max - eps, so every direction has a clearing ray and the trail
+          # of a moving block is erased as it goes.
+          inf_is_valid: True
+          # Aligned with range_max = 3.50 on /scan so the clearing rays cover the
+          # full sensor range: an +inf point sits at 3.4999, and a smaller
+          # raytrace_max_range truncates raytraceLine before the stale marks.
+          raytrace_max_range: 3.5
+          # Nav2 default kept: the 3.4999 m false point is beyond this range and is
+          # skipped when marking, so no phantom obstacle appears.
+          obstacle_max_range: 2.5
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.35
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      use_sim_time: true
+      update_frequency: 5.0
+      publish_frequency: 2.0
+      global_frame: odom
+      robot_base_frame: base_link
+      rolling_window: true
+      width: 3
+      height: 3
+      resolution: 0.05
+      robot_radius: 0.22
+      plugins: ["obstacle_layer", "inflation_layer"]
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True
+        observation_sources: scan
+        scan:
+          topic: /scan
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          # See the global_costmap notes: an +inf produces no point and therefore
+          # no clearing ray, so the trail of a moving block would stay lethal.
+          inf_is_valid: True
+          raytrace_max_range: 3.5
+          obstacle_max_range: 2.5
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.35
+
+collision_monitor:
+  ros__parameters:
+    use_sim_time: true
+    base_frame_id: base_link
+    odom_frame_id: odom
+    # In from the velocity smoother, out to Gazebo.
+    cmd_vel_in_topic:  /cmd_vel_smoothed
+    cmd_vel_out_topic: /cmd_vel
+    transform_tolerance: 0.2
+    source_timeout: 5.0
+    stop_pub_timeout: 2.0
+    polygons: ["StopPolygon"]
+    StopPolygon:
+      type: "polygon"
+      # Must be a flat double array, see header 6)
+      points: [0.3, 0.2, 0.3, -0.2, 0.0, -0.2, 0.0, 0.2]
+      action_type: "stop"
+      min_points: 4        # inert, see header 5)
+      max_points: 8        # the key Humble reads, see header 5): stop at >= 9 points
+      visualize: True
+      polygon_pub_topic: "stop_polygon"
+    observation_sources: ["scan"]
+    scan:
+      type: "scan"
+      topic: /scan

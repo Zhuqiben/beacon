@@ -1,0 +1,27 @@
+# Start the black / white dynamic cubes with a given line speed. This is the only way
+# to change their speed at runtime.
+#
+# The cubes must be stopped first (/dynamic_obstacles/set_enabled false or
+# /dynamic_obstacles/reset), otherwise the request is rejected: changing speed while a
+# cube is moving would leave its stored pose describing a different point of the path.
+#
+# speed is preferred; omega is a deprecated alias in the same unit:
+#   speed > 0              -> use speed (m/s)
+#   speed <= 0, omega > 0  -> use omega (m/s)
+#   both <= 0              -> keep the per-colour speed from params.yaml
+#
+# Speed is in simulation time (the node runs with use_sim_time=true), so the speed seen
+# on screen is speed * RTF. Set use_sim_time:=false to make the two equal.
+#
+# Keep the request on a single line: a trailing backslash breaks rosidl_adapter.
+# Example:
+#   ros2 service call /dynamic_obstacles/start slam_interfaces/srv/StartObstacles "{speed: 1.2}"
+float64 speed      # m/s along the path, simulation time; <= 0 = keep default
+string  color      # '' = every colour, otherwise only that colour
+float64 omega      # deprecated alias for speed, same unit
+---
+bool     success
+string   message
+string[] colors         # colours actually started
+float64[] speed_applied # resulting line speed, m/s
+float64[] omega_applied # same values as speed_applied, kept for older callers

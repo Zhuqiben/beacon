@@ -1,0 +1,12 @@
+string target_color        # red / green / blue / yellow
+float32 timeout_sec        # 0 = no explicit deadline
+float32 approach_distance  # m, desired standoff; 0 = use the node default
+---
+bool success
+string message
+float32 final_distance     # m, standoff actually reached
+---
+string state
+bool target_known          # true once the colour exists in the landmark map
+float32 distance_to_target # m; negative while the target position is unknown
+float32 elapsed_time       # s since the goal was accepted

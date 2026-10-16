@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use BEACON in academic work, please cite it using this metadata."
+title: "BEACON: Bearing-based Estimation, Active Colour landmark hOming, and Navigation"
+abstract: >-
+  A ROS 2 Humble simulation stack in which a TurtleBot 3 Waffle explores a Gazebo Classic
+  arena, detects coloured landmark blocks with its depth camera, builds a landmark map with
+  an EKF-SLAM filter, and then navigates to whichever colour it is asked for while avoiding
+  two roaming obstacles. The whole stack runs on a single machine with no hardware
+  dependency.
+type: software
+authors:
+  - name: "Zhuqiben"
+repository-code: "https://github.com/Zhuqiben/beacon"
+url: "https://github.com/Zhuqiben/beacon"
+version: 0.0.1
+date-released: 2026-10-16
+license: MIT
+keywords:
+  - ROS 2
+  - EKF-SLAM
+  - semantic SLAM
+  - landmark navigation
+  - Gazebo
+  - Nav2
+  - TurtleBot3
+  - robotics

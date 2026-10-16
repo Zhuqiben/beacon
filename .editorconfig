@@ -1,0 +1,39 @@
+# https://editorconfig.org
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{py,pyi}]
+indent_style = space
+indent_size = 4
+
+[*.{setup.py,setup.cfg}]
+indent_style = space
+indent_size = 4
+
+[*.{yaml,yml}]
+indent_style = space
+indent_size = 2
+
+[*.{xml,sdf,world,xacro,urdf,rviz}]
+indent_style = space
+indent_size = 2
+
+[*.{md,markdown}]
+indent_style = space
+indent_size = 2
+
+[*.sh]
+indent_style = space
+indent_size = 4
+
+[Makefile]
+indent_style = tab
+
+[*.{png,jpg,jpeg,pgm,stl,dae,zip}]
+insert_final_newline = false
+trim_trailing_whitespace = false

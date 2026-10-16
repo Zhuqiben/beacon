@@ -1,0 +1,34 @@
+# landmark_detector parameters.
+#
+# Usage:
+#   ros2 run landmark_detector detector_node --ros-args --params-file <this file>
+#   ros2 param get /landmark_detector red_a        # must return an array, or it did not take effect
+#
+# The thresholds must be flat parameters: one integer array of length 6 per segment,
+# [Hlo, Slo, Vlo, Hhi, Shi, Vhi]. Red straddles the 0/180 wrap of the hue axis, so it is
+# split into two segments. A nested form such as thresholds: {red: {low: [...]}} yields
+# nothing under Humble and fails silently.
+# The array elements must be integers (int64): writing 0.0/255.0 does not match the
+# INTEGER_ARRAY default declared in the node, and declare_parameter raises.
+/**:
+  ros__parameters:
+    use_sim_time: true
+    max_range: 6.0
+    min_range: 0.4
+    min_area: 200.0
+    depth_percentile: 30.0        # 30th percentile of the depth inside the bbox
+    bbox_margin: 0.25             # shrink the bbox to stay off the block edges and the floor
+    red_a:  [0,   120, 70,  10,  255, 255]     # red, low segment (wraps 0/180)
+    red_b:  [170, 120, 70,  180, 255, 255]     # red, high segment
+    green:  [40,  80,  70,  85,  255, 255]
+    blue:   [95,  120, 70,  130, 255, 255]
+    yellow: [20,  100, 100, 35,  255, 255]
+    white:  [0,   0,   200, 180, 40,  255]     # V >= 200, clear of the grey floor (V ~ 128)
+    black:  [0,   0,   0,   180, 255, 60]      # V <= 60
+
+# Lifecycle auto-activation node (configure before activate, in that order).
+lifecycle_autostart:
+  ros__parameters:
+    use_sim_time: true
+    target: /landmark_detector
+    delay_sec: 6.0

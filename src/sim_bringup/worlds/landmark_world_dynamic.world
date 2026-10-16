@@ -1,0 +1,145 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="landmark_world">
+    <light type="directional" name="sun">
+      <cast_shadows>false</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="c"><geometry><plane><normal>0 0 1</normal><size>8 8</size></plane></geometry></collision>
+        <visual name="v">
+          <geometry><plane><normal>0 0 1</normal><size>8 8</size></plane></geometry>
+          <material><ambient>0.5 0.5 0.5 1</ambient><diffuse>0.5 0.5 0.5 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- The four static target landmarks. The poses below are the plain (+-2, +-2)
+         layout, used when this file is handed straight to gzserver. The launch file
+         instead derives a world through sim_bringup/scripts/world_setup.py, which draws
+         one grid point per colour inside that colour's quadrant (red SW, green SE,
+         blue NW, yellow NE) and rewrites only the poses of these six models:
+
+           ros2 launch sim_bringup m8_demo.launch.py    randomised layout
+           gzserver on this file                        fixed (+-2, +-2) layout
+           world_setup.py prints the drawn scene on request
+
+         They stay static: the derived world is written before gzserver starts, so no
+         runtime relocation is needed and the landmarks never enter contact solving. -->
+    <model name="landmark_red">
+      <static>true</static><pose>-2 -2 0.2 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>0.4 0.4 0.4</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>0.4 0.4 0.4</size></box></geometry>
+          <material><script><name>Gazebo/Red</name></script></material></visual>
+      </link>
+    </model>
+
+    <model name="landmark_green">
+      <static>true</static><pose>2 -2 0.2 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>0.4 0.4 0.4</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>0.4 0.4 0.4</size></box></geometry>
+          <material><script><name>Gazebo/Green</name></script></material></visual>
+      </link>
+    </model>
+
+    <model name="landmark_blue">
+      <static>true</static><pose>-2 2 0.2 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>0.4 0.4 0.4</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>0.4 0.4 0.4</size></box></geometry>
+          <material><script><name>Gazebo/Blue</name></script></material></visual>
+      </link>
+    </model>
+
+    <model name="landmark_yellow">
+      <static>true</static><pose>2 2 0.2 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>0.4 0.4 0.4</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>0.4 0.4 0.4</size></box></geometry>
+          <material><script><name>Gazebo/Yellow</name></script></material></visual>
+      </link>
+    </model>
+
+    <!-- The two dynamic cubes, same 0.4 m size as the landmarks but not static:
+         /gazebo/set_entity_state cannot move a static entity, and static bodies do not
+         take part in contact solving. They are driven by
+         sim_bringup/scripts/dynamic_obstacles.py, started by m8_demo.launch.py and kept
+         still until asked to move.
+
+         The poses below are the t = 0 home poses, written by world_setup.py to match the
+         drawn path so the cubes do not jump when motion is enabled. The path is a random
+         walk over the whole arena, with no territories and no geometric pre-separation:
+         non-overlap is enforced at runtime by per-tick cell reservation, and the walk is
+         closed only so that it can be replayed as a loop. Clearance from every landmark
+         and the per-cube speed are checked by world_rules.validate_scene and written to
+         dynamic_paths.yaml, passed to the node as a second parameter file.
+
+         White (diffuse 1,1,1) and black (0,0,0) match the existing white and black
+         threshold segments in landmark_detector/config/detector_params.yaml; the 0.5
+         grey ground sits outside both. -->
+    <model name="obstacle_white">
+      <static>false</static>
+      <pose>0 1.2 0.2 0 0 3.1415926</pose>
+      <link name="link">
+        <inertial>
+          <mass>1.0</mass>
+          <inertia><ixx>0.0267</ixx><ixy>0</ixy><ixz>0</ixz>
+                   <iyy>0.0267</iyy><iyz>0</iyz><izz>0.0267</izz></inertia>
+        </inertial>
+        <collision name="c"><geometry><box><size>0.4 0.4 0.4</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>0.4 0.4 0.4</size></box></geometry>
+          <material><script><name>Gazebo/White</name></script></material></visual>
+      </link>
+    </model>
+
+    <model name="obstacle_black">
+      <static>false</static>
+      <pose>0 -1.2 0.2 0 0 0</pose>
+      <link name="link">
+        <inertial>
+          <mass>1.0</mass>
+          <inertia><ixx>0.0267</ixx><ixy>0</ixy><ixz>0</ixz>
+                   <iyy>0.0267</iyy><iyz>0</iyz><izz>0.0267</izz></inertia>
+        </inertial>
+        <collision name="c"><geometry><box><size>0.4 0.4 0.4</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>0.4 0.4 0.4</size></box></geometry>
+          <material><script><name>Gazebo/Black</name></script></material></visual>
+      </link>
+    </model>
+
+    <!-- gazebo_ros_state is a world plugin (GZ_REGISTER_WORLD_PLUGIN), so it can only be
+         loaded from here: `gzserver -s libgazebo_ros_state.so` fails with "incorrect
+         plugin type". It publishes /gazebo/model_states and serves
+         /gazebo/set_entity_state, both of which the rest of the stack relies on. -->
+    <plugin name="gazebo_ros_state" filename="libgazebo_ros_state.so">
+      <update_rate>50.0</update_rate>
+      <!-- Without this namespace the plugin advertises /model_states and /link_states at
+           the root, while every consumer here subscribes to /gazebo/model_states. -->
+      <ros>
+        <namespace>/gazebo</namespace>
+      </ros>
+    </plugin>
+
+    <physics type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+    <!-- Viewer-only camera pose for gzclient. The default pose hides the robot behind a
+         large translucent sensor cone; this one looks down at the arena from 7 m so the
+         0.4 m cubes and the robot stay visible for a whole run. -->
+    <gui fullscreen="0">
+      <camera name="user_camera">
+        <pose>0.0 -3.0 7.0 0 0.9 0</pose>
+      </camera>
+    </gui>
+
+  </world>
+</sdf>

@@ -1,0 +1,16 @@
+# landmark_map node parameters.
+#
+# Standalone debugging:
+#   ros2 run landmark_map map_node --ros-args \
+#     --params-file <share>/landmark_map/config/map_params.yaml
+#
+# A full stack run passes sim_bringup/config/params.yaml instead, whose landmark_map
+# section must hold the same values as this file.
+landmark_map:
+  ros__parameters:
+    use_sim_time: true
+    resolution: 0.05          # 160x160 = 8.0 / 0.05
+    size: 8.0                 # matches the arena size in the world (the ground covers +-4)
+    inflation_base: 0.30      # circumscribed circle of the 0.4 m cube plus margin [m]
+    sigma_k: 0.0              # 0 = constant radius, otherwise radius = base + sigma_k * sigma
+    max_inflation: 1.0        # cap on the radius, so an outlying sigma cannot stall the node

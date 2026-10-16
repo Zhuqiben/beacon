@@ -1,0 +1,21 @@
+# goal_selector node parameters.
+#
+# Standalone debugging:
+#   ros2 run goal_selector action_server --ros-args \
+#     --params-file <share>/goal_selector/config/goal_selector_params.yaml
+#
+# A full stack run passes sim_bringup/config/params.yaml instead, whose goal_selector
+# section must hold the same values as this file.
+goal_selector:
+  ros__parameters:
+    use_sim_time: true
+    approach_distance: 0.6    # stop distance [m] used when the goal request leaves it at 0
+    lost_threshold_sec: 5.0   # warn after this long without seeing the target colour
+    max_retries: 2            # costmap-clearing retries after a Nav2 failure
+    # Must be verbatim identical to the landmark_map section. map_node uses these values to
+    # size the lethal circles on /map, and this node uses them to work out how far a goal has
+    # to stay outside those circles. Changing one side only puts the goal inside the lethal
+    # circle, and Nav2 answers "Goal/Start in lethal space".
+    inflation_base: 0.30
+    sigma_k: 0.0
+    max_inflation: 1.0

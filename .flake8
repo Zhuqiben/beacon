@@ -1,0 +1,16 @@
+[flake8]
+# The house style is 4-space indent, single quotes and lines up to 120 columns.
+max-line-length = 120
+
+# colcon output is generated and never linted.
+extend-exclude = build,install,log,__pycache__,.venv,venv
+
+per-file-ignores =
+    # The sim_bringup tools are install(PROGRAMS) files rather than a Python package,
+    # so each one puts its own directory on sys.path before importing world_rules.
+    # The resulting E402 import-order warning is deliberate.
+    src/sim_bringup/scripts/*.py: E402
+
+# Report the column of every finding so editors can jump straight to it.
+show-source = True
+statistics = True

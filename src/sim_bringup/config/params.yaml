@@ -1,0 +1,383 @@
+/**:
+  ros__parameters:
+    use_sim_time: true
+
+landmark_detector:
+  ros__parameters:
+    use_sim_time: true
+    max_range: 6.0
+    min_range: 0.4
+    min_area: 200.0
+    depth_percentile: 30.0        # 0..100: 30th percentile of the depths in the bbox
+    bbox_margin: 0.25             # shrink the bbox by this fraction, away from the edges
+    # One flat 6-element array [Hlo, Slo, Vlo, Hhi, Shi, Vhi] per segment. ROS 2 has no
+    # map parameter type, so a nested table such as thresholds: {red: {low: ...}} reads
+    # back as nothing at all.
+    red_a:  [0,   120, 70,  10,  255, 255]     # red, low segment (straddles 0/180)
+    red_b:  [170, 120, 70,  180, 255, 255]     # red, high segment
+    green:  [40,  80,  70,  85,  255, 255]
+    blue:   [95,  120, 70,  130, 255, 255]
+    yellow: [20,  100, 100, 35,  255, 255]
+    white:  [0,   0,   200, 180, 40,  255]     # V >= 200, clear of the grey floor (V ~ 128)
+    black:  [0,   0,   0,   180, 255, 60]      # V <= 60
+
+ekf_slam:
+  ros__parameters:
+    use_sim_time: true
+    select_distance_max: 5.0
+    min_landmarks: 2
+    # The detector reports the range to the near face of a block, while z_hat is the range
+    # to its centre. The camera extrinsics come from camera_joint and camera_rgb_joint in
+    # model.sdf; the block half size comes from the world file.
+    range_bias_fix: true
+    camera_dx: 0.069
+    camera_dy: -0.047
+    landmark_half_size: 0.2
+
+landmark_map:
+  ros__parameters:
+    use_sim_time: true
+    resolution: 0.05
+    size: 8.0                     # matches the arena in the world file (floor covers +-4)
+    # The inflation circle has a FIXED size and does not scale with the EKF sigma.
+    # radius = min(inflation_base + sigma_k * sigma, max_inflation) is a 3-sigma ball:
+    # statistically conservative, but the four landmarks have sigmas an order of magnitude
+    # apart, which draws circles from 0.90 to 2.00 m across while the real blocks are
+    # 0.4 m, and a larger circle pushes the goal_selector stand-off past what the arrival
+    # check allows. With sigma_k = 0 the radius is always inflation_base. The sigma is
+    # still published on /landmark_map and drawn by /landmark_markers.
+    inflation_base: 0.30          # circumscribed circle of a 0.4 m block (0.283) plus margin
+    sigma_k: 0.0                  # 0 = do not scale with sigma
+    max_inflation: 1.0            # upper bound, so a pathological sigma cannot lock the node
+
+goal_selector:
+  ros__parameters:
+    use_sim_time: true
+    approach_distance: 0.6
+    lost_threshold_sec: 5.0
+    max_retries: 2
+    # Must match the landmark_map block above key by key: map_node uses these to size the
+    # lethal circles on /map and goal_selector uses them to decide how far outside those
+    # circles to stop. Change one side only and the goal lands inside a lethal circle,
+    # which Nav2 rejects with "Goal/Start in lethal space".
+    inflation_base: 0.30          # circumscribed circle of a 0.4 m block (0.283) plus margin
+    sigma_k: 0.0
+    max_inflation: 1.0
+    # Collision counting, robot against block, static landmarks and dynamic cubes alike.
+    # The source is the Gazebo contact sensor rather than a distance threshold: tb3_bumper
+    # on base_link in models/turtlebot3_waffle/model.sdf (libgazebo_ros_bumper.so)
+    # publishes gazebo_msgs/ContactsState. One ledger per /goto_block goal, cleared when
+    # the next goal starts.
+    collision_topic: /bumper_states
+    collision_stats_topic: /collision_stats
+    collision_rearm_sec: 0.35     # contact within this window of the last release is the same hit
+
+visualizer:
+  ros__parameters:
+    use_sim_time: true
+    # 0.0 disables visibility gating: a landmark marker is drawn as soon as it has been
+    # detected once and /landmark_map's valid flag alone decides whether it is drawn at
+    # all. This is not cheating, because valid comes from the EKF inited[colour] flag,
+    # which is only set inside init_landmark() after a real observation, so nothing can
+    # appear in RViz that the camera has not seen. The detector runs at about 0.4 Hz and
+    # in bursts, so a short window would only make the labels blink without saying
+    # anything about the map. Set > 0 to restore "draw only if seen within obs_ttl_sec
+    # seconds". Only /landmark_markers is affected: /map is the global_costmap
+    # StaticLayer input and always contains every valid landmark. The dynamic cubes on
+    # /obstacle_markers stay gated on visibility, because a stale position for a moving
+    # object is genuinely wrong.
+    obs_ttl_sec: 0.0
+
+# ---------------------------------------------------------------------------
+# World map rules, read by sim_bringup/scripts/world_setup.py BEFORE gzserver starts.
+#
+# The four landmarks are not pinned to (+-2, +-2): each colour draws a grid point inside
+# its own quadrant, and the patrol paths of the two dynamic cubes are regenerated in the
+# same draw (random walk across the whole arena, clear of every static block, speeds
+# deliberately different). The draw happens once per sim_bringup launch, and world_setup
+# writes it out as a derived world file, a parameter override file and scene.json.
+#   ros2 run sim_bringup world_setup.py --show           # what was drawn this time
+#   ros2 run sim_bringup world_setup.py --seed 20240501  # reproducible
+#   ros2 run sim_bringup world_setup.py --selftest 500   # offline property check
+# Every value below may be changed and takes effect on the next launch. Lengths are in
+# metres and the arena is 8x8 m (+-4.0).
+# ---------------------------------------------------------------------------
+world_rules:
+  ros__parameters:
+    arena_half: 4.0          # half side of the arena (ground_plane is 8x8 m)
+    wall_margin: 0.45        # clearance of paths and blocks from the arena border
+    block_half: 0.2          # half width of a 0.4 m cube
+    quadrant_lo: 1.20        # landmark axis distance from the origin, range [lo, hi]
+    quadrant_hi: 2.80        # lo also sets the closest gap between quadrants, 2*lo
+    grid_m: 0.05             # landmarks snap to this grid (same as the /map resolution)
+    clear_static: 0.70       # minimum centre distance of a dynamic path from a static block
+    speed_lo: 0.55           # dynamic cube speed range, m/s
+    speed_hi: 1.80
+    speed_gap: 0.25          # minimum difference of the two speeds
+    yaw_window: 0.30         # chord length used to derive the heading
+    max_yaw_rate: 2.0        # angular rate clamp (finite-difference spikes at corners)
+    max_attempts: 400        # seeds to try before giving up on one draw
+    # ---- random walk, three layers of collision avoidance ----
+    # The two cubes walk randomly across the whole arena: no territory, no fixed patrol
+    # ring. Separation comes from three layers:
+    #   * design time (window level): _PeerField remembers only the last
+    #     walk_peer_window ticks of the other cube, so walk_peer_keep applies to a
+    #     sliding window and the ground behind it becomes usable again, which is what
+    #     lets both cubes reach the whole arena;
+    #   * run time (cell level): dynamic_obstacles claims the cells of the next tick and
+    #     stops or backs off when it cannot, which also covers static blocks and walls;
+    #   * playback check (phase level): validate_scene replays four representative
+    #     phases and requires each cube to complete walk_laps_min laps.
+    # A permanent spatial exclusion cannot work here: over 105 s of random walk in an
+    # 8x8 m arena such a constraint ends up covering every reachable cell, which walls one
+    # cube into half the arena and leaves a quadrant empty.
+    cell_size: 0.10          # cell edge, m; must match the dynamic_obstacles block below
+    walk_seconds: 105.0      # joint simulation length of one path
+                             # path length = walk_seconds x speed, and 60 s leaves the
+                             # shortest path too short to reach the far corners
+    walk_candidates: 12      # candidate headings resampled every tick
+    walk_cone: 1.10          # spread of the candidates around the aim heading, rad
+    walk_probe: 6            # ticks a candidate is projected forward
+    walk_arrive: 0.45        # distance from the start that closes the loop, m
+    walk_bias_turn: 0.18     # max turn per tick of the heading random walk, rad
+                             # capped by max_yaw_rate / sim_rate_hz = 0.1 rad/tick
+    walk_path_step: 0.16     # path decimation step, m; a larger step rounds off corners
+    walk_escape: 8.0         # ticks stuck before the candidates spread over the full circle
+    walk_stuck: 400          # ticks without progress before this path is discarded
+    walk_yield: 4            # ticks a low-priority cube is blocked before backing off
+    walk_yield_lock: 40      # ticks of the backing-off commitment, so the cube does not
+                             # re-contest the cell after a single tick and livelock
+    walk_chord_slack: 0.03   # extra clearance, m: a decimated vertex pair is connected by
+                             # a chord that cuts inside the real arc by about step^2 / 8R
+    walk_peer_keep: 0.85     # clearance between the two paths, m (Chebyshev)
+                             # hard floor is 2*block_half + 2*cell_size = 0.766 m
+    walk_peer_window: 12     # length of the sliding window, ticks (0.6 s at 20 Hz)
+                             # too short pushes the conflict into run time and adds
+                             # yielding, too long degenerates into the permanent
+                             # territory described above
+    walk_mutual_after: 120   # ticks without progress before one cube is told to back off
+                             # on its own while the other is held under a no-yield gate,
+                             # so the retreat is one-sided; two cubes retreating together
+                             # free the shared segment and form a symmetric limit cycle
+    walk_mutual_lock: 60     # ticks of one deadlock retreat (scaled up to x4 per round)
+    walk_laps_min: 1.0       # laps each cube must complete in the playback, the main
+                             # criterion of validate_scene
+    # ---- robot parking spot, excluded at path level ----
+    # A cube may not cross the pose the robot is parked at. The path is a closed loop
+    # fixed at launch, so a cube cannot dodge at run time and the spot has to be excluded
+    # when the path is generated: launch passes spawn_x/spawn_y as world_setup.py
+    # --spawn-x/--spawn-y, and both the walk and the hard criteria in validate_scene treat
+    # it as a static obstacle. Once the robot drives away the path no longer has to yield
+    # to it, and no Gazebo ground truth is involved.
+    robot_half: 0.22         # robot footprint radius, same as robot_radius in nav2_params
+    clear_robot: 0.70        # clearance of a path from the parking spot centre, m
+    robot_keep: 1.10         # must be at least the run-time robot_keep in the
+                             # dynamic_obstacles block below: a design-time clearance
+                             # smaller than the run-time exclusion circle lets the path
+                             # run straight through that circle, so the cube is blocked
+                             # there every lap. A larger hole also pushes the two paths
+                             # onto the narrow ring more often, which makes fewer seeds
+                             # produce a path, so do not shrink this "for better coverage".
+    robot_spawn_x: 0.0       # parking spot; launch --spawn-x overrides it
+    robot_spawn_y: 0.0       # parking spot; launch --spawn-y overrides it
+    # ---- coverage ----
+    # A heading-only random walk collapses into a narrow band: the heading decorrelates
+    # over hundreds of ticks while crossing the arena takes tens, so the walk is
+    # ballistic. These values add "has this cell been visited" to the score of every tick
+    # and a pathfinding term to the heading.
+    walk_grid: 0.30          # coarse grid edge shared by novelty and coverage, m
+    walk_novelty: 0.60       # weight of cell freshness in the candidate score
+    walk_novelty_cap: 2      # visits after which a cell counts as used up
+    walk_aim_gain: 0.85      # weight of the pathfinding term in the free-run heading
+                             # (0 = pure heading random walk)
+    walk_aim_rays: 16        # directions cast when aiming
+    walk_aim_reach: 3.20     # aim ray length, m. Rays step by metres, max(walk_grid,
+                             # step); stepping by ticks instead gave a look-ahead of only
+                             # 0.35 m and left the cube pecking at the edge of the region
+                             # it had already covered.
+    walk_aim_replan: 8       # ticks between two aim recomputations
+    walk_cover_min: 0.22     # coverage floor of a single path, below which a new seed is
+                             # drawn; only meant to reject a collapsed world
+    walk_cover_union: 0.74   # coverage floor of the union of both paths
+    walk_quad_min: 0.08      # coverage floor of a single path inside EACH quadrant, as a
+                             # fraction of the cells that path did scan. Total coverage
+                             # alone cannot reject two cubes owning one half each, which
+                             # is exactly what this criterion exists for. A uniform walk
+                             # puts about 25% in every quadrant, so 0.08 only rejects a
+                             # quadrant that is essentially empty.
+    sim_rate_hz: 20.0        # joint simulation rate, must equal rate_hz
+    sim_gap_min: 0.42        # minimum centre distance of the two cubes, m
+                             # (a cube is 0.4 m wide, so the centres must exceed that)
+    sim_stall_max: 0.65      # allowed fraction of time spent stalled while yielding
+
+dynamic_obstacles:
+  ros__parameters:
+    use_sim_time: true
+    enabled: false                # starts still; /dynamic_obstacles/start or set_enabled moves it
+    rate_hz: 20.0                 # /gazebo/set_entity_state push rate (read once at start-up)
+    marker_rate_hz: 5.0           # /obstacle_markers rate (read once at start-up)
+    marker_topic: /obstacle_markers
+    frame_id: map                 # the Gazebo world frame and this stack's map frame coincide
+    reset_on_enable: true         # zero the phase on enable, so every run starts from home
+    obstacle_z: 0.2               # height of a 0.4 m cube centre, matching the world <pose>
+    # Markers are drawn only for cubes the camera can see: the position comes from the
+    # (range, bearing) of /observations plus the EKF pose on /robot_pose, never from
+    # Gazebo ground truth. Do not set require_observation false for a demo, because false
+    # falls back to the true position even when the robot is not looking that way; it is
+    # only useful when checking that world, physics and detector agree. Both parameters
+    # take effect immediately:
+    #   ros2 param set /dynamic_obstacles require_observation false
+    #   ros2 param set /dynamic_obstacles observation_ttl_sec 5.0
+    require_observation: true
+    observation_ttl_sec: 30.0     # send DELETE, so the marker leaves RViz, after this long
+                                  # without a camera report. The detector runs at about
+                                  # 0.4 Hz and in bursts, so a short TTL makes the cubes
+                                  # blink; 0 means never delete once seen
+    observation_topic: /observations
+    pose_topic: /robot_pose
+    # The colours must match <model name> = obstacle_<colour> in the world file.
+    #
+    # Path and speed come from the draw made by the world map rules above:
+    #   white_path / black_path   = [x0, y0, x1, y1, ...] vertices of the closed loop, m
+    #   white_speed / black_speed = speed along the path, m/s
+    #   white_phase / black_phase = start phase in 0..1, times the path length
+    # Speed is in simulation time, so the speed on screen is speed x RTF; add
+    # -p use_sim_time:=false to make the two equal. world_setup.py writes these three
+    # pairs into dynamic_paths.yaml, passed as a second --params-file, so the defaults
+    # below only matter when the node runs on its own.
+    #
+    # A speed may only be changed while the cubes are stopped:
+    #   ros2 service call /dynamic_obstacles/set_enabled std_srvs/srv/SetBool "{data: false}"
+    #   ros2 param set /dynamic_obstacles white_speed 1.2
+    #   ros2 service call /dynamic_obstacles/start slam_interfaces/srv/StartObstacles "{speed: 0.0}"
+    # The start service can also carry the speed directly, and speed <= 0 uses the
+    # parameter:
+    #   ros2 service call /dynamic_obstacles/start slam_interfaces/srv/StartObstacles \
+    #       "{speed: 1.0, color: ''}"
+    #
+    # Cell exclusion: every block claims the cell it occupies and nobody else may enter it
+    # unless the occupant yields. Both cubes compute their next position and register
+    # their cells as they go, and static landmarks are registered through static_boxes as
+    # occupants that never release.
+    #
+    # Exclusion alone deadlocks head to head, so priority follows the order of colors:
+    # colors[0] only waits, and later colours back off along their own loop after
+    # yield_ticks. A backing-off cube walks over cells it has just given up, so it always
+    # has a way out, and this matches the offline replay in world_rules.replay_stats tick
+    # for tick, which is why a path that passes the self-check behaves the same here.
+    colors: ['white', 'black']
+    # white_path, black_path and static_boxes are deliberately not written out with empty
+    # values here: ROS 2 reads a YAML [] as an empty byte array, which conflicts with the
+    # DOUBLE_ARRAY declaration and stops the node from starting. They come from the
+    # override file written by world_setup.py; on their own the declared empty
+    # DOUBLE_ARRAY defaults are used, and the node falls back to the compat ring.
+    white_speed: 0.0
+    black_speed: 0.0
+    white_phase: 0.0
+    black_phase: 0.0
+    cell_size: 0.10               # cell edge, m; must match the world_rules block;
+                                  # <= 0 disables cell exclusion
+    yield_ticks: 4                # ticks a low-priority cube is blocked before backing off
+                                  # (must match walk_yield)
+    yield_lock_ticks: 40          # ticks of the backing-off commitment
+                                  # (must match walk_yield_lock). The commitment is
+                                  # normally cut short by the cell behind being occupied
+                                  # by the other cube, so this value rarely changes the
+                                  # outcome, but it keeps the "retreat as far as possible"
+                                  # semantics.
+    mutual_after: 120             # ticks without progress before one cube is forced to
+                                  # back off on its own, must match walk_mutual_after;
+                                  # 0 disables it. The one-sided retreat matters because
+                                  # two cubes retreating together free the shared segment,
+                                  # both turn round at the same moment and lock again. The
+                                  # cube to retreat is chosen by how long it has been
+                                  # blocked, skipping any whose own behind cell is occupied
+                                  # by the other cube.
+    mutual_lock: 60               # ticks of one deadlock retreat, must match walk_mutual_lock
+    static_box_half: 0.0          # half size of a static landmark, m;
+                                  # <= 0 registers no static occupant
+    # static_boxes = [x0, y0, x1, y1, ...] with the four landmark centres, from the override file
+    yaw_window: 0.30              # chord length used to derive the heading
+    max_yaw_rate: 2.0             # angular rate clamp
+    # ---- robot exclusion circle ----
+    # The parking spot is excluded at generation time (robot_half, clear_robot and
+    # robot_spawn_x/y in the world_rules block above), but the cubes are teleported with
+    # /gazebo/set_entity_state and the robot cannot replan around a cube that appears
+    # inside its body, so the check is repeated at run time: before moving, a cube looks
+    # at whether its next position falls inside robot_keep metres of the robot
+    # (Chebyshev, the same metric as the cell table), turns along its path instead, and
+    # keeps the new direction for robot_yield ticks. Both parameters take effect
+    # immediately:
+    #   ros2 param set /dynamic_obstacles robot_keep 1.0
+    #
+    # The position comes from /robot_pose, the robot's own EKF pose, the same information
+    # the robot uses to avoid obstacles, so this is not ground truth.
+    #
+    # 1.10 m is the 0.281 m robot circle plus the 0.283 m cube half diagonal (0.564 m is
+    # the contact distance) plus 0.35 m of EKF pose error: the cubes only see the
+    # estimate, and 0.75 m measured from an estimate that can be half a metre off leaves
+    # as little as 0.28 m of real gap, inside the contact distance. robot_keep <= 0
+    # disables the avoidance.
+    robot_keep: 1.10
+    robot_keep_sigma: 0.0         # no scaling with the EKF sigma; <= 0 = fixed radius
+    robot_keep_max: 1.10          # equal to robot_keep, so the soft circle is always 1.10 m
+                                  # both values are the same boundary as robot_keep in the
+                                  # world_rules block above, and the design-time clearance
+                                  # must be at least this
+    robot_yield: 3                # ticks before a cube may change direction again
+    # Backing off a single tick is the wrong response: a cube advances speed*dt (about
+    # 0.04 m) per tick while the circle is over a metre wide, so the next tick and the one
+    # before it both land inside the circle, the cube stands still and the robot keeps
+    # closing in. The retreat therefore follows the path, and since stepping back into the
+    # circle on the next tick cancels it out, the cube reverses its direction and keeps
+    # going in the new one instead. The usable path then equals the whole free arc rather
+    # than the few centimetres next to the circle.
+    #
+    # robot_yield_arc is the furthest arc considered, and robot_arc_max the arc a single
+    # tick may actually cross, m. They are separate because one jump long enough to clear
+    # the circle passes over arc that is still inside it. Both must also cover the longest
+    # arc segment the circle cuts out of the path, otherwise the cube can only turn round
+    # and oscillate between the two ends of a single segment: the segments are longer than
+    # the circle diameter, while their chords stay outside the hard circle, so geometry
+    # alone would let the cube cross.
+    robot_yield_arc: 3.00
+    robot_arc_max: 3.00
+    # Hard contact circle, m: the straight segment of a jump must lie entirely outside it,
+    # because a cube is moved in one step and Gazebo does not interpolate. The soft circle
+    # (robot_keep) means "keep out", this one means "never pass through". 0.75 rather than
+    # the soft 1.10 is deliberate: a hard circle at the soft radius would freeze a cube
+    # whenever the robot comes close. 0 disables the check.
+    robot_hard_keep: 0.75
+    # Creep lower bound, m: when the soft circle is hit, first try to creep past the robot
+    # one tick at a time (about 0.07 m), accepting any position outside this radius.
+    # A jump across the circle needs its whole straight segment outside the hard circle,
+    # which is impossible once the path itself enters the circle, so without this stage
+    # the cube can only turn round and oscillate. 0.70 sits above the 0.564 m contact
+    # distance and below robot_hard_keep, so a path that grazes the robot still gets
+    # through. 0 disables it.
+    robot_cross_keep: 0.70
+    # Turning round is the real problem, not the radius: on a closed loop a reversal means
+    # running back and forth inside the single segment the circle leaves free, however
+    # large or small that segment is. The fix is to walk around the robot instead of
+    # turning back: scan forward along the path for a landing point outside the circle
+    # with a free cell, and follow an arc around the robot's exclusion square from the
+    # current point to that one, the way a person walks around a parked car. The cube
+    # leaves the path while bypassing, and afterwards the arc length takes over again with
+    # the ORIGINAL direction, so it never reverses and can keep going round the loop.
+    #
+    # Bypassing only triggers when the original direction is completely blocked, with both
+    # a jump and a creep along it failing. Both criteria deliberately look at the original
+    # direction only: the reverse almost always leads back the way the cube came, and
+    # counting it as passable would stop bypassing from ever triggering. The old reversal
+    # logic remains as a fallback for a cube already inside the circle, or a bypass arc
+    # blocked for too long by another block or by the robot. Disable it at run time to
+    # compare:
+    #   ros2 param set /dynamic_obstacles robot_bypass_arc 0.0
+    robot_bypass_arc: 12.00       # furthest distance scanned forward for a landing point, m
+                                  # (<= 0 disables bypassing)
+    robot_bypass_clear: 0.15      # extra clearance of the bypass arc outside the soft circle
+
+performance_monitor:
+  ros__parameters:
+    use_sim_time: true
+    model_name: waffle            # Gazebo entity name used for the ground-truth comparison
