@@ -9,8 +9,9 @@ uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-* Reworded the design-notes section of `README.zh-CN.md` so the reason for the vendored
-  Nav2 launch file and for `tf_relay.py` reads as prose instead of a literal gloss.
+* Dropped the summarizing sentence that opened the design notes in both READMEs. The two
+  bullets now state what is unusual about `nav2_navigation.launch.py` and `tf_relay.py`
+  directly, without a preamble about where the reasoning lives.
 
 ## [0.0.1] - 2026-10-16
 

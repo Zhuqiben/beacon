@@ -203,14 +203,12 @@ Gazebo。
 
 ## 设计说明
 
-有两处决定无法从代码本身看出来，原因写在各自模块的文档字符串里：
-
-* `nav2_navigation.launch.py` 是从 Nav2 的 `navigation_launch.py` 复制而来，只改动一处：把
-  `collision_monitor` 串进控制链路。上游文件会将 `velocity_smoother` 的输出重映射到 `cmd_vel`，
-  导致碰撞监控被挤到链路之外。
-* `tf_relay.py` 解决的是 `/tf` 的时延问题。Gazebo 的差速驱动插件发布 `odom->base_footprint` 时
-  并不匀速：常常静默数秒，再把积压的变换一次性补发，于是以 RELIABLE 方式订阅的一方拿到的是几秒前
-  的 `stamp`，而同一条消息的 BEST_EFFORT 副本始终新鲜。该节点把这条边重新发布一次，使 RELIABLE
+* `nav2_navigation.launch.py` 是 Nav2 `navigation_launch.py` 的副本。原文件把 `velocity_smoother`
+  的输出重映射到 `cmd_vel`，`collision_monitor` 因此落在控制链路之外；副本只改这一处映射，把它
+  接回来。
+* `tf_relay.py` 解决 `/tf` 的时延。Gazebo 的差速驱动插件发布 `odom->base_footprint` 并不匀速：
+  常常静默数秒，再把积压的变换一次性补发，于是以 RELIABLE 方式订阅的一方拿到的是几秒前的
+  `stamp`，而同一条消息的 BEST_EFFORT 副本始终新鲜。该节点把这条边重新发布一次，把 RELIABLE
   一侧的时延降到与 BEST_EFFORT 相当。
 
 ## 参与贡献

@@ -208,15 +208,13 @@ Continuous integration runs flake8, shellcheck, a manifest and asset check, a fu
 
 ## Design notes
 
-Two files contain reasoning that is not obvious from the code, and both are documented in
-their module docstrings:
-
-* `nav2_navigation.launch.py` is a vendored copy of Nav2's `navigation_launch.py` with
-  `collision_monitor` added to the chain. The stock file remaps `velocity_smoother`'s output
-  onto `cmd_vel` and pushes the collision monitor out.
-* `tf_relay.py` exists because Gazebo's diff-drive plugin delivers `odom->base_footprint`
-  reliably enough to build a backlog, while the best-effort copy of the same message stays
-  fresh.
+* `nav2_navigation.launch.py` is a copy of Nav2's `navigation_launch.py`. The stock file
+  remaps `velocity_smoother`'s output onto `cmd_vel`, which pushes `collision_monitor` out of
+  the chain; the copy changes that one remap and puts the monitor back in.
+* `tf_relay.py` fixes the latency of `/tf`. Gazebo's diff-drive plugin publishes
+  `odom->base_footprint` in bursts — nothing for a few seconds, then the whole backlog at
+  once — so a RELIABLE reader sees a stamp that is seconds old while a BEST_EFFORT reader of
+  the same message stays fresh.
 
 ## Contributing
 
