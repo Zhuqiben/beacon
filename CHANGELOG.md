@@ -40,8 +40,15 @@ history.
 * `scripts/install_deps.sh`, an idempotent dependency installer with a `--check` mode and
   shellcheck-clean sourcing of the ROS 2 environment.
 * `docs/INSTALL.md` — supported platform, quick start, manual `apt` route and
-  troubleshooting. `docs/BUILD.md` covers the build itself, and `docs/WALKTHROUGH.md` is the
-  numbered path from `git clone` to a completed `GoToBlock` goal, with a check at each step.
+  troubleshooting. `docs/BUILD.md` covers the build itself, what each package produces and
+  how to rebuild only what changed. `docs/WALKTHROUGH.md` is the whole sequence once, from
+  `git clone` to a completed `GoToBlock` goal, with a verification check at each of its nine
+  steps, a single-block speedrun and a symptom-to-section table.
+* Simplified Chinese editions of the four main documents — `README.zh-CN.md`,
+  `docs/INSTALL.zh-CN.md`, `docs/BUILD.zh-CN.md` and `docs/WALKTHROUGH.zh-CN.md`. They mirror
+  the English pages section by section, and every page in either language opens with a
+  language switcher that links to its counterpart. Commands, package names, topics,
+  parameters and paths stay in ASCII on both sides.
 * `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CITATION.cff`,
   `THIRD_PARTY_NOTICES.md` and this changelog.
 * GitHub issue and pull request templates; the issue chooser points at the discussion and
@@ -55,6 +62,15 @@ history.
 * Package metadata carries the maintainer, repository URL and bug tracker URL; the
   `scripts/install_deps.sh` documentation and the two files derived from Apache-2.0 sources
   are labelled as such.
+
+### Fixed
+
+* The README and this changelog claimed `m8_demo.launch.py` could chain a `GoToBlock` goal
+  automatically. It does not: it randomises the arena, starts the stack and animates the two
+  obstacles, leaving the goal to the client.
+* `ros2 run sim_bringup benchmark` and `ros2 run client_node client red` do not work as
+  written. The six `sim_bringup` tools keep their `.py` suffix (`benchmark.py`), and the
+  client takes `--color red`; a bare positional argument is ignored and `yellow` is sent.
 
 [Unreleased]: https://github.com/Zhuqiben/beacon/compare/v0.0.1...HEAD
 [0.0.1]: https://github.com/Zhuqiben/beacon/releases/tag/v0.0.1

@@ -107,7 +107,7 @@ src/
   visualizer/           annotated camera stream and RViz markers
   client_node/          GoToBlock client
   sim_bringup/          launch files, worlds, models, parameters, CLI tools
-docs/                   installation and build guides
+docs/                   installation, build and walkthrough guides, in English and zh-CN
 scripts/                host-side tooling (install_deps.sh)
 ```
 
@@ -123,6 +123,21 @@ Anything a package needs at runtime goes through `install(...)` in its `CMakeLis
 3. Add `setup.py` (`ament_python`) or `CMakeLists.txt` (`ament_cmake`).
 4. Register it in `src/sim_bringup/package.xml` if the launch files need it.
 5. Add it to the package table in [README.md](README.md).
+
+## Documentation
+
+Four documents describe the project: the root [README.md](README.md), and
+[docs/INSTALL.md](docs/INSTALL.md), [docs/BUILD.md](docs/BUILD.md) and
+[docs/WALKTHROUGH.md](docs/WALKTHROUGH.md) for installing, building and running it.
+
+Each has a Simplified Chinese edition next to it — `README.zh-CN.md`,
+`docs/INSTALL.zh-CN.md`, `docs/BUILD.zh-CN.md`, `docs/WALKTHROUGH.zh-CN.md` — and every page
+opens with a language switcher that links to its counterpart. When you change one of the
+English pages, update the corresponding `zh-CN` page in the same pull request, or say in the
+pull request that the translation is still to come.
+
+Keep commands, package names, topic names, parameter names and file paths in ASCII on every
+page: they are what a reader copies into a terminal.
 
 ## Commit messages
 

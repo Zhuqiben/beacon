@@ -1,3 +1,7 @@
+<p align="center">
+  <a href="WALKTHROUGH.md">English</a> | <a href="WALKTHROUGH.zh-CN.md">简体中文</a>
+</p>
+
 # From clone to a completed goal
 
 One linear path through BEACON: get the code, install the dependencies, build, run, send a

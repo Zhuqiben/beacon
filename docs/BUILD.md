@@ -1,3 +1,7 @@
+<p align="center">
+  <a href="BUILD.md">English</a> | <a href="BUILD.zh-CN.md">简体中文</a>
+</p>
+
 # Building BEACON
 
 BEACON is an ordinary ROS 2 workspace: nine packages under `src/`, one `colcon build`, one

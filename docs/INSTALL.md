@@ -1,3 +1,7 @@
+<p align="center">
+  <a href="INSTALL.md">English</a> | <a href="INSTALL.zh-CN.md">简体中文</a>
+</p>
+
 # Installing BEACON
 
 BEACON is simulation-only. The robot, its RGB-D camera, the sensor noise and the moving
