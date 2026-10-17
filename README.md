@@ -100,7 +100,8 @@ shell needs `source install/setup.bash` before anything from this workspace is v
 [docs/BUILD.md](docs/BUILD.md) covers the rest: what each package produces, why
 `--symlink-install`, which edits need a rebuild and which do not, building a single package
 (`--packages-up-to`), when to wipe `build/` and `install/`, and the build failures seen in
-practice.
+practice. [docs/WALKTHROUGH.md](docs/WALKTHROUGH.md) walks the whole thing once, from clone
+to a completed goal.
 
 ## Run
 
@@ -119,7 +120,7 @@ ros2 launch sim_bringup demo.launch.py gui:=false
 Then ask for a colour from a second terminal:
 
 ```bash
-ros2 run client_node client red
+ros2 run client_node client --color red
 ```
 
 `demo.launch.py` accepts a handful of arguments; `ros2 launch sim_bringup demo.launch.py -s`
@@ -127,17 +128,21 @@ lists them all. The interesting ones are `world` (which scene to load), the `spa
 `spawn_y` / `spawn_yaw_deg` triple, `min_landmarks` (how many valid landmark updates an EKF
 correction needs) and `creep_topic` (where the final creep twist is published).
 
+[docs/WALKTHROUGH.md](docs/WALKTHROUGH.md) is the same thing from the other end: a numbered
+path from `git clone` to a completed `GoToBlock` goal, with something to check at each step.
+
 ### Randomised scene
 
-`m8_demo.launch.py` generates a fresh arena from a seed, launches the same stack on it, and
-can chain a `GoToBlock` goal automatically:
+`m8_demo.launch.py` generates a fresh arena from a seed and launches the same stack on it,
+with the two roaming obstacles animated:
 
 ```bash
 ros2 launch sim_bringup m8_demo.launch.py world_seed:=1490
 ```
 
-The seed drives landmark placement and the two roaming cubes; the same seed always produces
-the same scene. With no `world_seed` a random one is drawn and printed.
+The seed drives landmark placement and the two cubes; the same seed always produces the same
+scene. With no `world_seed` a random one is drawn and printed. Add `rviz:=true` for the SLAM
+map view, or `gui:=false` for a headless run.
 
 ## Interfaces
 
@@ -156,14 +161,18 @@ the same scene. With no `world_seed` a random one is drawn and printed.
 ## Tools
 
 ```bash
-ros2 run sim_bringup world_setup        # one randomisation pass; writes a world file
-ros2 run sim_bringup world_rules        # the placement and roaming rules themselves
-ros2 run sim_bringup dynamic_obstacles  # drives the two cubes
-ros2 run sim_bringup benchmark          # metrics against /gazebo/model_states ground truth
-ros2 run sim_bringup visibility_map     # which arena positions can see how many landmarks
-ros2 run sim_bringup tf_relay           # /tf freshness relay
-ros2 run landmark_detector sample_color # click a pixel, print the HSV thresholds to paste
+ros2 run sim_bringup world_setup.py        # one randomisation pass; writes a world file
+ros2 run sim_bringup world_rules.py        # the placement and roaming rules themselves
+ros2 run sim_bringup dynamic_obstacles.py  # drives the two cubes
+ros2 run sim_bringup benchmark.py          # metrics against /gazebo/model_states ground truth
+ros2 run sim_bringup visibility_map.py     # which arena positions can see how many landmarks
+ros2 run sim_bringup tf_relay.py           # /tf freshness relay
+ros2 run landmark_detector sample_color    # click a pixel, print the HSV thresholds to paste
 ```
+
+The `sim_bringup` tools keep their `.py` suffix because they are installed straight from
+`scripts/` by `install(PROGRAMS ...)`; `sample_color` is a console script and has none.
+`ros2 pkg executables sim_bringup` lists what is actually installed.
 
 ## Parameters
 

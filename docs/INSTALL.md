@@ -211,5 +211,6 @@ a specific reason to move to the newer ROS-repository package.
 
 ## See also
 
+* [WALKTHROUGH.md](WALKTHROUGH.md) — the whole sequence once, from clone to a completed goal.
 * [BUILD.md](BUILD.md) — the build in detail, and build troubleshooting.
 * [`../README.md`](../README.md) — what the system does, how to run it, the interfaces.

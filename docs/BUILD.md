@@ -72,7 +72,7 @@ gitignored and disposable; nothing outside the workspace depends on them.
 | `performance_monitor` | `ament_python` | Editable install plus the `monitor_node` script. |
 | `visualizer` | `ament_python` | Editable install plus the `viz_node` script. |
 | `client_node` | `ament_python` | Editable install plus the `client` script. |
-| `sim_bringup` | `ament_cmake` | Installs `launch/`, `worlds/`, `config/` and `models/` into `share/sim_bringup/`, and the six command line tools into `lib/sim_bringup/` so that `ros2 run sim_bringup <tool>` works. |
+| `sim_bringup` | `ament_cmake` | Installs `launch/`, `worlds/`, `config/` and `models/` into `share/sim_bringup/`, and the six command line tools into `lib/sim_bringup/` so that `ros2 run sim_bringup <tool>.py` works. |
 
 Everything a package needs at run time has to be listed in `install(...)` in its
 `CMakeLists.txt` or in `data_files` in its `setup.py`. A file that is not installed is not
@@ -214,10 +214,11 @@ ros2 pkg prefix slam_interfaces
 ros2 pkg executables sim_bringup
 ```
 
-`ros2 pkg executables sim_bringup` should list `benchmark`, `dynamic_obstacles`, `tf_relay`,
-`visibility_map`, `world_rules` and `world_setup`. If it is empty, the
-`install(PROGRAMS ...)` step did not run — check that `scripts/` is present and that the
-build actually completed.
+`ros2 pkg executables sim_bringup` should list the six tools with their `.py` suffix —
+`benchmark.py`, `dynamic_obstacles.py`, `tf_relay.py`, `visibility_map.py`, `world_rules.py`
+and `world_setup.py`. They are installed straight from `scripts/` by `install(PROGRAMS ...)`,
+so the file name is the command name. If the list is empty, that step did not run — check
+that `scripts/` is present and that the build actually completed.
 
 ## Running the tests
 
@@ -310,6 +311,7 @@ This is a run-time problem rather than a build one; the troubleshooting section 
 
 ## See also
 
+* [WALKTHROUGH.md](WALKTHROUGH.md) — the whole sequence once, from clone to a completed goal.
 * [INSTALL.md](INSTALL.md) — platform, dependencies, manual `apt` route, run-time problems.
 * [`../CONTRIBUTING.md`](../CONTRIBUTING.md) — project layout, adding a package, commit and
   pull request conventions.

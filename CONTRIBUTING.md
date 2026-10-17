@@ -21,7 +21,8 @@ Gazebo Classic, so no robot hardware is needed to work on it.
 
 The supported platform is Ubuntu 22.04 (Jammy) on x86_64 with ROS 2 Humble and Gazebo
 Classic 11. See [docs/INSTALL.md](docs/INSTALL.md) for the full list and for the manual
-`apt` route.
+`apt` route, or [docs/WALKTHROUGH.md](docs/WALKTHROUGH.md) for the whole sequence in order
+from a fresh clone to a completed goal.
 
 ```bash
 git clone https://github.com/Zhuqiben/beacon.git ~/ros2_ws
