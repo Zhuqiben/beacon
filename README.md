@@ -83,12 +83,20 @@ position error, and the worst goal still stopped 0.59 m from its block. The left
 camera looking straight down at the world and the right panel is what the filter believes,
 so the two can be compared frame by frame.
 
+![The same four goals with both dynamic obstacles moving at 0.6 m/s](docs/media/gifs/gif_mission_dynamic.gif)
+
+Repeating the run with the two cubes moving changes nothing about the outcome: 4/4 reached,
+17.1 m driven in 212 s with a 6.5 cm RMS position error, and no contact with a cube or a
+block. In the left panel the white and black cubes translate between frames while the robot
+circles the arena; in the right panel a cube is drawn only while the robot's camera reports
+it, so the map never claims to know where an unseen obstacle is.
+
 ![Estimated trajectory against ground truth, with the landmark positions](docs/media/figures/fig_trajectory.png)
 
 ![Position and heading error over a whole run](docs/media/figures/fig_localisation_error.png)
 
 [docs/media/README.md](docs/media/README.md) has the rest: the per-stage latency and
-observation-rate plots, the eight-run comparison, three more animations, the raw logs behind
+observation-rate plots, the eight-run comparison, two more animations, the raw logs behind
 every number above, and how the recording was made.
 
 ## Packages

@@ -26,6 +26,8 @@
 | `/observations` | 每帧的地标观测 |
 | `/performance_monitor` | 各阶段耗时（检测、EKF-SLAM、规划、位姿桥接） |
 | `/observations/annotated` | 叠加了检测框的相机画面，约 2.8 Hz 采样 |
+| `/overhead/overhead/image_raw` | 俯视渲染画面，用作四目标动画的左栏 |
+| `/obstacle_markers` | 机器人当前认为每个动态方块在哪（`gif_mission_dynamic.gif` 的右栏） |
 
 每次运行都使用仓库自身的入口：
 
@@ -35,6 +37,15 @@ ros2 run client_node client --color <colour> --timeout 280
 ```
 
 此环境下必须 `gui:=true`：Gazebo 通过 X 显示渲染机器人相机，无头的 `gzserver` 不会产生图像，检测器自然始终检测不到任何东西。
+
+动态障碍那一次在第一段目标之前就把方块开起来，并一直开到结束：
+
+```bash
+ros2 service call /dynamic_obstacles/start slam_interfaces/srv/StartObstacles "{speed: 0.6}"
+```
+
+方块只有在机器人相机看到它时才会出现在地图里，因为这是系统唯一的位置来源。方块离开视野后，
+标记会被撤销（`markers.csv` 中 `action: 2`），而不是冻结在最后一次位姿上。
 
 任务结果（`success`、`final_distance_m`、`duration_s`）取自客户端节点自身的上报，不是事后推算的数字。
 
@@ -111,6 +122,32 @@ ros2 run client_node client --color <colour> --timeout 280
 变化，而状态机始终停留在 `NAVIGATING`。只有这一段需要穿过场地中部、也就是两个动态障碍所在的
 区域，而全程没有碰到色块。
 
+### `gifs/gif_mission_dynamic.gif`（0.9 MB）
+
+同样的四个目标、同样的顺序，但两个动态障碍在第一段开始前就已启动，并以 `0.6 m/s`
+全程移动。这正是本项目想展示的场景：机器人必须一边躲避两个自己也在跑的方块，一边不断
+重新规划。
+
+两栏的含义同上，区别在于什么东西在动。左侧画面里白色与黑色方块逐帧平移，机器人身上
+那个实线圆是真实位姿。右侧画面里，方块只有在机器人自己的相机报告它时才以实心方块出现，
+并带一条最近观测的虚线尾迹；一旦离开视野，方块就消失，只剩尾迹。这是有意为之：地图没
+有别的方块位置来源，画出机器人看不见的方块等于谎报系统所知。
+
+| 目标 | 耗时 | 路径 | 末距 | 定位 RMS |
+|---|---|---|---|---|
+| 红 | 34.5 s | 3.13 m | 0.553 m | 2.7 cm |
+| 蓝 | 30.7 s | 4.86 m | 0.549 m | 4.1 cm |
+| 黄 | 26.5 s | 4.83 m | 0.550 m | 7.2 cm |
+| 绿 | 107.2 s | 4.28 m | 0.594 m | 7.6 cm |
+
+四段全部成功，全程没有碰到方块。绿色一段的表现与 `gif_mission_four_goals.gif` 完全
+一致：耗时约为另外三段的三倍，且大部分时间里估计位置冻结、状态机停留在 `NAVIGATING`。
+两次独立运行在同一段上复现同一个卡顿，说明问题出在场地中部的穿越，而不是那一次运行恰好
+遇到的方块轨迹。
+
+动画以 10 fps 播放，四段合起来约为真实速度的十倍。素材取自 1.8 Hz 的俯视录像，
+两次目标之间的停顿同样被抽稀。
+
 ### `gifs/gif_navigation.gif`（0.7 MB）
 
 仅地图视角的参考运行动画：地标被观测到后逐个出现，虚线圆为其 sigma，EKF 轨迹叠加在真值路径上。
@@ -149,4 +186,4 @@ ros2 topic echo /robot_pose --once          # 先确认话题存在
 
 - 世界种子 `2024` 未纳入统计。该种子的场景生成不会终止：`world_rules.py` 在 `_ray_novelty` 中死循环，`world_setup.py` 永不返回，launch 因此起不来任何节点。其余尝试过的种子均正常。
 - 数据采集于使用软件 OpenGL 的虚拟机，绝对耗时比有 GPU 的机器悲观。阶段之间的**相对**比较仍然有效。
-- 动画取自机器人相机话题而非桌面录屏，因此展示的就是检测器实际看到的画面。例外是 `gif_mission_four_goals.gif`：它的左栏是在场地上方生成的一个普通 Gazebo 相机模型——`libgazebo_ros_camera` 垂直向下，`z = 8`，`FOV 1.05`，720×720、5 Hz。
+- 动画取自机器人相机话题而非桌面录屏，因此展示的就是检测器实际看到的画面。例外是 `gif_mission_four_goals.gif` 与 `gif_mission_dynamic.gif`：它们的左栏是在场地上方生成的一个普通 Gazebo 相机模型——`libgazebo_ros_camera` 垂直向下，`z = 8`，`FOV 1.05`，720×720、5 Hz。

@@ -31,6 +31,8 @@ changed for this: the node only listens and writes CSV files.
 | `/observations` | per-frame landmark detections |
 | `/performance_monitor` | per-stage processing latency (detector, EKF-SLAM, planner, pose bridge) |
 | `/observations/annotated` | camera frames with the detection boxes drawn, sampled at ~2.8 Hz |
+| `/overhead/overhead/image_raw` | top-down render used for the left panel of the four-goal animations |
+| `/obstacle_markers` | where the robot currently believes each dynamic cube is (right panel of `gif_mission_dynamic.gif`) |
 
 Each run is launched with the repository's own entry points:
 
@@ -42,6 +44,18 @@ ros2 run client_node client --color <colour> --timeout 280
 `gui:=true` is required in this environment: Gazebo renders the robot's camera
 through the X display, so a headless `gzserver` produces no images and the
 detector legitimately never fires.
+
+For the moving-obstacle run the cubes are started before the first goal and are
+left running to the end:
+
+```bash
+ros2 service call /dynamic_obstacles/start slam_interfaces/srv/StartObstacles "{speed: 0.6}"
+```
+
+The cubes only appear in the map while the robot's camera sees them, because
+that is the only source of cube positions the stack has. When a cube leaves the
+field of view the marker is withdrawn (`action: 2` in `markers.csv`) rather than
+frozen at its last pose.
 
 Mission outcome (`success`, `final_distance_m`, `duration_s`) is the figure the
 client node itself reports, not a number computed after the fact.
@@ -144,6 +158,40 @@ the state machine stays in `NAVIGATING`. It is the only leg that has to cross
 the middle of the arena, where the two moving obstacles are, and it never
 touched a block.
 
+### `gifs/gif_mission_dynamic.gif` (0.9 MB)
+
+The same four goals in the same order, but with both dynamic obstacles started
+before the first leg and left running at `0.6 m/s` for the whole mission. This
+is the scene the project exists for: the robot has to keep re-planning around
+two cubes that are themselves driving around the arena.
+
+The panels are the ones described above; the difference is what moves. In the
+left panel the white and black cubes translate between frames, and the solid
+outline drawn over the robot is the ground-truth pose. In the right panel the
+cubes appear as filled squares only while the robot's own camera reports them,
+with a dotted trail of recent observations; when a cube leaves the field of view
+the square disappears and only the trail remains. That is deliberate: the map
+has no other source of cube positions, so drawing a cube the robot cannot see
+would be a lie about what the stack knows.
+
+| Goal | Time | Path | Final distance | RMS error |
+|---|---|---|---|---|
+| red | 34.5 s | 3.13 m | 0.553 m | 2.7 cm |
+| blue | 30.7 s | 4.86 m | 0.549 m | 4.1 cm |
+| yellow | 26.5 s | 4.83 m | 0.550 m | 7.2 cm |
+| green | 107.2 s | 4.28 m | 0.594 m | 7.6 cm |
+
+All four legs succeed and none touches a cube. The green leg behaves exactly as
+it does in `gif_mission_four_goals.gif`: about three times the duration of the
+other three, and again most of it spent with the estimated position frozen while
+the state machine stays in `NAVIGATING`. Two independent runs reproducing the
+same stall on the same leg point at the crossing of the arena centre, not at the
+particular cube paths that run happened to produce.
+
+The animation is played at 10 fps and covers the four legs in about ten times
+real time. It was assembled from a 1.8 Hz overhead recording; the inter-goal
+pauses are thinned out as before.
+
 ### `gifs/gif_navigation.gif` (0.7 MB)
 
 Map-only animation of the reference run: landmarks appear as they are observed,
@@ -190,7 +238,7 @@ Raw column layout of the reference run, in [`data/raw_s1490_red/`](data/raw_s149
   absolute latency numbers are pessimistic compared with a machine with a GPU.
   They are still a fair relative comparison between the stages.
 - The animations come from the robot's camera topic rather than a desktop
-  recording, so they show exactly what the detector saw. The exception is
-  `gif_mission_four_goals.gif`, whose left panel is a plain Gazebo camera model
-  spawned above the arena: `libgazebo_ros_camera` pointed straight down at
-  `z = 8`, `FOV 1.05`, 720×720 at 5 Hz.
+  recording, so they show exactly what the detector saw. The exceptions are
+  `gif_mission_four_goals.gif` and `gif_mission_dynamic.gif`, whose left panel is
+  a plain Gazebo camera model spawned above the arena: `libgazebo_ros_camera`
+  pointed straight down at `z = 8`, `FOV 1.05`, 720×720 at 5 Hz.
