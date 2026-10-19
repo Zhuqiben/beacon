@@ -1,0 +1,80 @@
+{
+  "run": "s1490_red",
+  "goal_color": "red",
+  "success": true,
+  "final_distance_m": 0.554,
+  "duration_s": 36.3,
+  "pose_samples": 564,
+  "err_mean_m": 0.0228,
+  "err_rms_m": 0.0267,
+  "err_max_m": 0.0385,
+  "yaw_rms_deg": 0.882,
+  "yaw_max_deg": 1.456,
+  "path_length_m": 3.064,
+  "landmarks": {
+    "red": {
+      "x": -2.004,
+      "y": -2.793,
+      "sigma": 0.146,
+      "truth_x": -2.05,
+      "truth_y": -2.75,
+      "error_m": 0.063
+    },
+    "green": {
+      "x": 2.458,
+      "y": -2.245,
+      "sigma": 0.079,
+      "truth_x": 2.5,
+      "truth_y": -2.2,
+      "error_m": 0.061
+    },
+    "blue": {
+      "x": -2.28,
+      "y": 2.674,
+      "sigma": 0.121,
+      "truth_x": -2.15,
+      "truth_y": 2.75,
+      "error_m": 0.151
+    },
+    "yellow": {
+      "x": 2.585,
+      "y": 1.58,
+      "sigma": 0.077,
+      "truth_x": 2.65,
+      "truth_y": 1.5,
+      "error_m": 0.103
+    }
+  },
+  "latency": {
+    "detector": {
+      "n": 37,
+      "mean_ms": 57.541,
+      "p50_ms": 56.798,
+      "p95_ms": 63.628,
+      "max_ms": 64.305
+    },
+    "EKF-SLAM": {
+      "n": 37,
+      "mean_ms": 3.57,
+      "p50_ms": 3.529,
+      "p95_ms": 4.015,
+      "max_ms": 4.143
+    },
+    "planner": {
+      "n": 24,
+      "mean_ms": 0.0,
+      "p50_ms": 0.0,
+      "p95_ms": 0.0,
+      "max_ms": 0.0
+    },
+    "pose bridge": {
+      "n": 37,
+      "mean_ms": 3.383,
+      "p50_ms": 3.25,
+      "p95_ms": 3.828,
+      "max_ms": 4.143
+    }
+  },
+  "total_observations": 636,
+  "mean_rate_hz": 14.24
+}

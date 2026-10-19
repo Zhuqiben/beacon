@@ -23,6 +23,7 @@ truth used for scoring comes from Gazebo itself.
 ## Contents
 
 * [What the system does](#what-the-system-does)
+* [Results](#results)
 * [Packages](#packages)
 * [Requirements](#requirements)
 * [Build](#build)
@@ -50,6 +51,37 @@ walks a small state machine:
 
 While a goal is active the server keeps the camera's view of the scene reconciled with the
 map, so a landmark that turns out to be somewhere else does not keep the plan alive.
+
+## Results
+
+![A full mission: camera view with detector boxes on the left, the map being built on the right](docs/media/gifs/gif_mission_red.gif)
+
+Eight seeded missions, covering five world seeds and all four goal colours. Every one
+reached its target.
+
+| Run | Goal | Time | Final distance | Path | Observations | RMS error | Map error |
+|---|---|---|---|---|---|---|---|
+| `s1490_red` | red | 36.3 s | 0.554 m | 3.06 m | 636 | 2.7 cm | 9.5 cm |
+| `s1490_green` | green | 16.9 s | 0.550 m | 2.87 m | 265 | 7.2 cm | 6.7 cm |
+| `s1490_blue` | blue | 26.8 s | 0.547 m | 3.10 m | 434 | 3.6 cm | 8.7 cm |
+| `s1490_yellow` | yellow | 19.3 s | 0.550 m | 2.55 m | 275 | 4.5 cm | 6.8 cm |
+| `s3141_red` | red | 30.4 s | 0.545 m | 2.89 m | 577 | 7.8 cm | 7.2 cm |
+| `s42_yellow` | yellow | 15.3 s | 0.550 m | 1.61 m | 274 | 6.2 cm | 3.4 cm |
+| `s777_green` | green | 17.6 s | 0.552 m | 2.68 m | 427 | 2.6 cm | 11.5 cm |
+| `s7_blue` | blue | 24.3 s | 0.549 m | 2.41 m | 540 | 2.5 cm | 11.2 cm |
+| **Mean** | | **23.4 s** | **0.550 m** | **2.65 m** | **428** | **4.6 cm** | **8.1 cm** |
+
+The final distance settles at 0.55 m because the goal selector stops as soon as it is inside
+the 0.60 m approach radius, so that column measures how well the landmark was localised
+rather than how close the robot can drive.
+
+![Estimated trajectory against ground truth, with the landmark positions](docs/media/figures/fig_trajectory.png)
+
+![Position and heading error over a whole run](docs/media/figures/fig_localisation_error.png)
+
+[docs/media/README.md](docs/media/README.md) has the rest: the per-stage latency and
+observation-rate plots, the eight-run comparison, two more animations, the raw logs behind
+every number above, and how the recording was made.
 
 ## Packages
 
