@@ -107,14 +107,16 @@ localisation error and landmark map accuracy on the right one.
 
 ## Animations
 
-### `gifs/gif_mission_red.gif` (1.1 MB)
+### `gifs/gif_mission_red.gif` (1.2 MB)
 
 The complete reference mission, seed `1490`, goal `red`. Left: the robot's own
-camera with the detector's boxes. Right: the map being built and the trajectory
-being followed. Frames were taken from `/observations/annotated` at about 2.8 Hz
-and are played at 6 fps, so the animation runs roughly twice real time.
+camera with the detector's boxes. Right: the map being built, the trajectory
+followed and the current heading. Frames were taken from
+`/observations/annotated` at about 2.8 Hz and are played at 8 fps, so the
+animation runs roughly three times real time. The idle stretch before the robot
+starts turning is cut, so both panels move from the first frame.
 
-### `gifs/gif_mission_blue.gif` (0.9 MB)
+### `gifs/gif_mission_blue.gif` (1.0 MB)
 
 The same view for seed `7` with goal `blue`.
 

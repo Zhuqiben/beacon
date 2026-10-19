@@ -84,11 +84,11 @@ ros2 run client_node client --color <colour> --timeout 280
 
 ## 动画
 
-### `gifs/gif_mission_red.gif`（1.1 MB）
+### `gifs/gif_mission_red.gif`（1.2 MB）
 
-参考任务全程，种子 `1490`，目标红色。左侧是机器人相机画面与检测框，右侧是地图构建过程与轨迹。画面取自 `/observations/annotated`（约 2.8 Hz），以 6 fps 播放，因此动画约为真实速度的两倍。
+参考任务全程，种子 `1490`，目标红色。左侧是机器人相机画面与检测框，右侧是地图构建过程、已走轨迹与当前朝向。画面取自 `/observations/annotated`（约 2.8 Hz），以 8 fps 播放，约为真实速度的三倍。机器人开始转动前的静止片段已剪掉，两侧画面从第一帧起都在变化。
 
-### `gifs/gif_mission_blue.gif`（0.9 MB）
+### `gifs/gif_mission_blue.gif`（1.0 MB）
 
 种子 `7`、目标蓝色的同款视角。
 
