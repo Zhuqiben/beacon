@@ -75,12 +75,20 @@ The final distance settles at 0.55 m because the goal selector stops as soon as 
 the 0.60 m approach radius, so that column measures how well the landmark was localised
 rather than how close the robot can drive.
 
+![Four goals in one session: a Gazebo overhead view on the left, the EKF map on the right](docs/media/gifs/gif_mission_four_goals.gif)
+
+The four goals also run back to back in one session, from one launch and one map: red,
+blue, yellow, green, all four reached. That session drove 16.8 m in 204 s with a 6.0 cm RMS
+position error, and the worst goal still stopped 0.59 m from its block. The left panel is a
+camera looking straight down at the world and the right panel is what the filter believes,
+so the two can be compared frame by frame.
+
 ![Estimated trajectory against ground truth, with the landmark positions](docs/media/figures/fig_trajectory.png)
 
 ![Position and heading error over a whole run](docs/media/figures/fig_localisation_error.png)
 
 [docs/media/README.md](docs/media/README.md) has the rest: the per-stage latency and
-observation-rate plots, the eight-run comparison, two more animations, the raw logs behind
+observation-rate plots, the eight-run comparison, three more animations, the raw logs behind
 every number above, and how the recording was made.
 
 ## Packages

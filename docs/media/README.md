@@ -120,6 +120,30 @@ starts turning is cut, so both panels move from the first frame.
 
 The same view for seed `7` with goal `blue`.
 
+### `gifs/gif_mission_four_goals.gif` (0.9 MB)
+
+Four goals driven back to back in one session, from one launch and one map, in
+the order red, blue, yellow, green. Left: a camera spawned 8 m above the world,
+looking straight down. Right: the map and the trajectory the filter thinks it
+drove. The overhead frames come from `/overhead/overhead/image_raw` at roughly
+0.6 Hz and are played at 8 fps; the stretches where the robot is parked between
+goals are thinned out, so the clock in the map title jumps rather than stalling.
+The layout of the two panels is the same, which is the point: the left one is
+the world as it is, the right one is the world as the filter believes it.
+
+| Goal | Time | Path | Final distance | RMS error |
+|---|---|---|---|---|
+| red | 34.5 s | 3.14 m | 0.550 m | 3.6 cm |
+| blue | 34.9 s | 4.83 m | 0.552 m | 5.2 cm |
+| yellow | 30.8 s | 4.73 m | 0.550 m | 7.8 cm |
+| green | 103.4 s | 4.11 m | 0.590 m | 6.2 cm |
+
+Green takes three times as long as the other three even though it is not the
+longest leg: for 75 % of it the estimated position does not move at all, while
+the state machine stays in `NAVIGATING`. It is the only leg that has to cross
+the middle of the arena, where the two moving obstacles are, and it never
+touched a block.
+
 ### `gifs/gif_navigation.gif` (0.7 MB)
 
 Map-only animation of the reference run: landmarks appear as they are observed,
@@ -136,6 +160,9 @@ source install/setup.bash
 # 2. run one mission (GUI required for the camera to render)
 ros2 launch sim_bringup m8_demo.launch.py world_seed:=1490 gui:=true &
 ros2 run client_node client --color red --timeout 280
+
+#    or drive several goals in a row against the same launch and the same map
+for c in red blue yellow green; do ros2 run client_node client --color $c --timeout 170; done
 
 # 3. record while it runs
 ros2 topic echo /robot_pose --once          # sanity check
@@ -163,4 +190,7 @@ Raw column layout of the reference run, in [`data/raw_s1490_red/`](data/raw_s149
   absolute latency numbers are pessimistic compared with a machine with a GPU.
   They are still a fair relative comparison between the stages.
 - The animations come from the robot's camera topic rather than a desktop
-  recording, so they show exactly what the detector saw.
+  recording, so they show exactly what the detector saw. The exception is
+  `gif_mission_four_goals.gif`, whose left panel is a plain Gazebo camera model
+  spawned above the arena: `libgazebo_ros_camera` pointed straight down at
+  `z = 8`, `FOV 1.05`, 720×720 at 5 Hz.

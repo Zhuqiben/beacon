@@ -92,6 +92,25 @@ ros2 run client_node client --color <colour> --timeout 280
 
 种子 `7`、目标蓝色的同款视角。
 
+### `gifs/gif_mission_four_goals.gif`（0.9 MB）
+
+一次启动、一张地图、连续跑完四个目标：红、蓝、黄、绿。左侧是挂在世界坐标上方 8 m、
+垂直向下的相机，右侧是滤波器认为走过的地图与轨迹。俯视画面取自
+`/overhead/overhead/image_raw`（约 0.6 Hz），以 8 fps 播放；两次目标之间车停着不动的
+片段被抽稀，所以地图标题里的计时会跳变而不是卡住。两栏的取景完全一致，这正是这张图
+的意义：左边是世界的真实样子，右边是滤波器心里的样子。
+
+| 目标 | 耗时 | 路径 | 末距 | 定位 RMS |
+|---|---|---|---|---|
+| 红 | 34.5 s | 3.14 m | 0.550 m | 3.6 cm |
+| 蓝 | 34.9 s | 4.83 m | 0.552 m | 5.2 cm |
+| 黄 | 30.8 s | 4.73 m | 0.550 m | 7.8 cm |
+| 绿 | 103.4 s | 4.11 m | 0.590 m | 6.2 cm |
+
+绿色一段的耗时是另外三段的三倍，但它并不是最长的一段：其中 75% 的时间里估计位置完全没有
+变化，而状态机始终停留在 `NAVIGATING`。只有这一段需要穿过场地中部、也就是两个动态障碍所在的
+区域，而全程没有碰到色块。
+
 ### `gifs/gif_navigation.gif`（0.7 MB）
 
 仅地图视角的参考运行动画：地标被观测到后逐个出现，虚线圆为其 sigma，EKF 轨迹叠加在真值路径上。
@@ -106,6 +125,9 @@ source install/setup.bash
 # 2. 跑一次任务（相机需要 GUI 才能渲染）
 ros2 launch sim_bringup m8_demo.launch.py world_seed:=1490 gui:=true &
 ros2 run client_node client --color red --timeout 280
+
+#    或者连续跑多个目标，同一张地图、同一次启动
+for c in red blue yellow green; do ros2 run client_node client --color $c --timeout 170; done
 
 # 3. 运行期间记录
 ros2 topic echo /robot_pose --once          # 先确认话题存在
@@ -127,4 +149,4 @@ ros2 topic echo /robot_pose --once          # 先确认话题存在
 
 - 世界种子 `2024` 未纳入统计。该种子的场景生成不会终止：`world_rules.py` 在 `_ray_novelty` 中死循环，`world_setup.py` 永不返回，launch 因此起不来任何节点。其余尝试过的种子均正常。
 - 数据采集于使用软件 OpenGL 的虚拟机，绝对耗时比有 GPU 的机器悲观。阶段之间的**相对**比较仍然有效。
-- 动画取自机器人相机话题而非桌面录屏，因此展示的就是检测器实际看到的画面。
+- 动画取自机器人相机话题而非桌面录屏，因此展示的就是检测器实际看到的画面。例外是 `gif_mission_four_goals.gif`：它的左栏是在场地上方生成的一个普通 Gazebo 相机模型——`libgazebo_ros_camera` 垂直向下，`z = 8`，`FOV 1.05`，720×720、5 Hz。
