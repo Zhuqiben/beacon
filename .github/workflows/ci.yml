@@ -19,7 +19,7 @@ jobs:
     name: Lint and metadata
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         with:
@@ -46,7 +46,7 @@ jobs:
       # Pinned so that a local run and this run report the same diagnostics.
       SHELLCHECK_VERSION: v0.10.0
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install shellcheck
         run: |
@@ -70,7 +70,7 @@ jobs:
     name: Build and test (ROS 2 Humble)
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: ros-tooling/setup-ros@v0.7
         with:
